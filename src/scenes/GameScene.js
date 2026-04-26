@@ -652,6 +652,7 @@ export class GameScene extends Phaser.Scene {
     this.flipperSystem.update(delta, ball);
     this.plungerSystem.update(delta, ball, this.ballSystem.isReadyToLaunch());
     this.ballSystem.clampSpeed(21);
+    this.ballSystem.ensureMinSpeed(2.0);
 
     if (ball && !this.isRespawning) {
       if (this.ballSystem.wasRecentlyLaunched(2400)
