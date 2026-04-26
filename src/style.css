@@ -1,0 +1,115 @@
+:root {
+  --page-top: #1a0035;
+  --page-mid: #0d0022;
+  --page-bottom: #000008;
+  --frame: #c040ff;
+  --frame-shadow: #6600cc;
+  --panel: rgba(20, 0, 48, 0.92);
+  --panel-line: rgba(240, 80, 255, 0.35);
+  --glow: #ff40ff;
+  --warning: #ffea00;
+  --font-ui: 'Trebuchet MS', 'Franklin Gothic Medium', sans-serif;
+  --font-display: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100svh;
+  font-family: var(--font-ui);
+  color: #fff0ff;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(200, 0, 255, 0.18), transparent 28%),
+    radial-gradient(circle at 80% 60%, rgba(255, 0, 180, 0.12), transparent 22%),
+    radial-gradient(circle at 20% 80%, rgba(80, 0, 255, 0.14), transparent 20%),
+    linear-gradient(180deg, var(--page-top) 0%, var(--page-mid) 45%, var(--page-bottom) 100%);
+  overflow: hidden;
+}
+
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+body::before {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 40, 255, 0.10), transparent 22%),
+    radial-gradient(circle at 82% 70%, rgba(60, 0, 255, 0.08), transparent 18%),
+    linear-gradient(90deg, rgba(200, 0, 255, 0.06), transparent 12%, transparent 88%, rgba(0, 0, 0, 0.4));
+}
+
+body::after {
+  opacity: 0.2;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 1));
+}
+
+#app {
+  display: grid;
+  place-items: center;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+
+#game-shell {
+  width: min(100vw - 24px, 56.25vh);
+  aspect-ratio: 9 / 16;
+  max-height: calc(100svh - 24px);
+  border-radius: 22px;
+  border: 4px solid rgba(200, 60, 255, 0.85);
+  box-shadow:
+    0 0 60px rgba(200, 0, 255, 0.6),
+    0 30px 80px rgba(0, 0, 0, 0.7),
+    inset 0 2px 0 rgba(255, 180, 255, 0.5),
+    inset 0 -4px 0 rgba(80, 0, 120, 0.9),
+    inset 0 0 0 8px rgba(60, 0, 100, 0.9),
+    inset 0 0 0 10px rgba(10, 0, 24, 0.95),
+    inset 0 0 40px rgba(200, 0, 255, 0.15);
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(200, 60, 255, 0.12), transparent 10%),
+    linear-gradient(180deg, rgba(10, 0, 24, 0.98), rgba(10, 0, 24, 0.85));
+}
+
+#game-shell canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+@media (max-width: 640px) {
+  #app {
+    padding: 0;
+  }
+
+  #game-shell {
+    width: 100vw;
+    max-height: 100svh;
+    border-radius: 0;
+    border-inline: 0;
+    border-top: 0;
+    border-bottom: 0;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto;
+  }
+}
