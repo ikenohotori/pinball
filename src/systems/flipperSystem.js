@@ -75,19 +75,7 @@ export class FlipperSystem {
       MatterLib.Body.setAngle(flipper.body, flipper.currentAngle);
 
       if (flipper.active && ball) {
-        const dx = ball.position.x - flipper.pivot.x;
-        const dy = ball.position.y - flipper.pivot.y;
-        const distance = Math.hypot(dx, dy);
-        const insideArc = distance < 112 && distance > 18;
-        const sideGate = flipper.side === 'left' ? ball.position.x < 300 : ball.position.x > 240;
-        const descending = ball.velocity.y > -1.5;
-
-        if (insideArc && sideGate && descending && ball.position.y > 690) {
-          const reach = Phaser.Math.Clamp((distance - 22) / 74, 0, 1);
-          const lift = 0.0088 + (reach * 0.0042);
-          const xForce = (flipper.side === 'left' ? 0.0038 : -0.0038) + (reach * (flipper.side === 'left' ? 0.0016 : -0.0016));
-          MatterLib.Body.applyForce(ball, ball.position, { x: xForce, y: -lift });
-        }
+        // force assist removed — collision-based kick in GameScene handles bounce
       }
     }
   }

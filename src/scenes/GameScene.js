@@ -39,7 +39,7 @@ export class GameScene extends Phaser.Scene {
     this.drawTableBase();
     this.buildStaticLabels();
     this.ballSystem.spawn();
-    this.ballGlow = this.add.circle(0, 0, 18, 0xffe59a, 0.22).setDepth(15);
+    this.ballGlow = this.add.circle(0, 0, 18, 0x4488cc, 0.18).setDepth(15);
 
     this.registerControls();
     this.registerCollisions();
@@ -78,17 +78,12 @@ export class GameScene extends Phaser.Scene {
 
   resolveZone(pointer) {
     const normalizedX = Phaser.Math.Clamp(pointer.x / TABLE_WIDTH, 0, 1);
-    const normalizedY = Phaser.Math.Clamp(pointer.y / TABLE_HEIGHT, 0, 1);
-
-    if (normalizedY < 0.7) {
-      return 'none';
-    }
 
     if (normalizedX < 0.33) {
       return 'left';
     }
 
-    if (normalizedX > 0.66) {
+    if (normalizedX > 0.67) {
       return 'right';
     }
 
@@ -158,8 +153,17 @@ export class GameScene extends Phaser.Scene {
     if (otherBody.label === 'bumper') {
       if (this.cooldownPassed(`bumper-${otherBody.id}`, 110)) {
         this.missionSystem.onBumperHit();
-        this.ballSystem.nudgeFrom(otherBody.position, 0.03);
-        this.cameras.main.shake(45, 0.0022);
+        // direction from bumper center to ball
+        const bx = ballCandidate.position.x - otherBody.position.x;
+        const by = ballCandidate.position.y - otherBody.position.y;
+        const bd = Math.max(1, Math.hypot(bx, by));
+        const minBumpSpeed = 14;
+        const curSpeed = Math.hypot(ballCandidate.velocity.x, ballCandidate.velocity.y);
+        const bumpSpeed = Math.max(minBumpSpeed, curSpeed * 1.15);
+        Phaser.Physics.Matter.Matter.Body.setVelocity(ballCandidate, {
+          x: (bx / bd) * bumpSpeed,
+          y: (by / bd) * bumpSpeed,
+        });
         this.sfx.play('bumper');
       }
       return;
@@ -186,6 +190,27 @@ export class GameScene extends Phaser.Scene {
           duration: 90,
           yoyo: true,
         });
+      }
+      return;
+    }
+
+    if (otherBody.label === 'flipper-left' || otherBody.label === 'flipper-right') {
+      const side = otherBody.label === 'flipper-left' ? 'left' : 'right';
+      const flipper = this.flipperSystem.state[side];
+
+      if (flipper?.active && ballCandidate.velocity.y > -12) {
+        if (this.cooldownPassed(`flip-kick-${side}`, 110)) {
+          const dx = ballCandidate.position.x - flipper.pivot.x;
+          const dy = ballCandidate.position.y - flipper.pivot.y;
+          const dist = Math.hypot(dx, dy);
+          const reach = Phaser.Math.Clamp((dist - 10) / (this.flipperSystem.length - 10), 0, 1);
+          const speed = 22 + reach * 7;
+          const xSign = side === 'left' ? 1 : -1;
+          const xVel = xSign * (0.15 + reach * 0.42) * speed;
+          const yVel = -Math.sqrt(Math.max(0.01, speed * speed - xVel * xVel));
+          Phaser.Physics.Matter.Matter.Body.setVelocity(ballCandidate, { x: xVel, y: yVel });
+          this.sfx.play('flipper');
+        }
       }
       return;
     }
@@ -250,208 +275,300 @@ export class GameScene extends Phaser.Scene {
 
     g.clear();
 
-    // ---- 外枠：ネオンパープルグラデーション ----
-    g.fillGradientStyle(0x3a006f, 0x20003d, 0x16002e, 0x0a0018, 1);
+    // ---- 背景（ダーク青紫） ----
+    g.fillStyle(0x04061a, 1);
     g.fillRoundedRect(20, 14, 500, 930, 22);
-    g.lineStyle(3, 0xd040ff, 0.9);
+
+    // 外枠（ダークゴールド/ブロンズ）
+    g.lineStyle(7, 0x5a3a00, 1.0);
     g.strokeRoundedRect(20, 14, 500, 930, 22);
+    g.lineStyle(3, 0xc88800, 0.75);
+    g.strokeRoundedRect(24, 18, 492, 922, 21);
+    g.lineStyle(2, 0x7a5a00, 0.55);
+    g.strokeRoundedRect(27, 21, 486, 916, 20);
 
-    g.fillGradientStyle(0x280050, 0x180038, 0x0e0028, 0x080018, 1);
-    g.fillRoundedRect(32, 26, 476, 906, 18);
+    // ---- プレイエリア（青紫グラデーション・Space Cadet特有の色調） ----
+    g.fillGradientStyle(0x0e1448, 0x0a1040, 0x080e38, 0x060c30, 1);
+    g.fillRoundedRect(36, 82, 400, 832, 18);
 
-    // ---- メインプレイエリア ----
-    g.fillGradientStyle(0x120028, 0x0a0020, 0x060016, 0x030010, 1);
-    g.fillRoundedRect(42, 84, 446, 826, 20);
+    // プレイエリア上部（少し明るい青） 
+    g.fillStyle(0x121860, 0.22);
+    g.fillRoundedRect(40, 86, 392, 300, 14);
 
-    g.fillStyle(0x080018, 0.98);
-    g.fillRoundedRect(46, 88, 388, 590, 20);
-    g.fillRoundedRect(438, 84, 46, 822, 18);
+    // 右レーン（シューター）
+    g.fillStyle(0x050820, 0.98);
+    g.fillRect(436, 82, 50, 832);
 
-    // ---- スター背景 ----
-    g.fillStyle(0xffffff, 0.7);
-    for (let s = 0; s < 60; s += 1) {
-      const sx = 50 + ((s * 43 + 7) % 380);
-      const sy = 100 + ((s * 97 + 13) % 580);
-      g.fillCircle(sx, sy, s % 11 === 0 ? 1.5 : 0.8);
+    // 内枠
+    g.lineStyle(2, 0x2a3880, 0.65);
+    g.strokeRoundedRect(38, 84, 396, 828, 16);
+
+    // ---- 星フィールド ----
+    const starData = [
+      [62, 108, 0], [94, 142, 1], [132, 96, 0], [164, 168, 2], [202, 112, 0],
+      [242, 128, 1], [282, 98, 2], [312, 152, 0], [352, 118, 1], [383, 88, 0],
+      [64, 208, 2], [102, 248, 0], [148, 228, 1], [192, 198, 0], [232, 218, 2],
+      [272, 192, 1], [302, 238, 0], [342, 208, 2], [383, 178, 1], [65, 308, 0],
+      [98, 338, 2], [138, 298, 1], [178, 328, 0], [218, 278, 2], [258, 348, 1],
+      [298, 308, 0], [338, 288, 2], [378, 318, 1], [62, 418, 0], [108, 458, 2],
+      [152, 398, 1], [188, 438, 0], [228, 418, 2], [268, 388, 1], [308, 428, 0],
+      [352, 398, 2], [382, 448, 1], [72, 508, 0], [112, 538, 2], [158, 498, 1],
+      [198, 528, 0], [238, 508, 2], [278, 488, 1], [318, 518, 0], [358, 502, 2],
+      [392, 532, 1], [78, 598, 0], [118, 628, 2], [158, 602, 1], [198, 618, 0],
+      [238, 592, 2], [278, 612, 1], [318, 588, 0], [358, 622, 2], [78, 698, 1],
+      [118, 718, 0], [158, 702, 2], [198, 712, 1], [238, 696, 0], [278, 708, 2],
+      [318, 692, 1], [358, 716, 0], [90, 760, 2], [135, 778, 1], [175, 748, 0],
+      [215, 768, 2], [255, 752, 1], [295, 772, 0], [335, 756, 2], [375, 770, 1],
+    ];
+    for (const [sx, sy, type] of starData) {
+      const alpha = type === 0 ? 0.48 : type === 1 ? 0.32 : 0.62;
+      const radius = type === 2 ? 1.5 : 0.8;
+      g.fillStyle(0xffffff, alpha);
+      g.fillCircle(sx, sy, radius);
     }
 
-    // ---- 斜めネオンライン（マゼンタ） ----
-    g.lineStyle(2, 0xff40ff, 0.14);
-    for (let row = 0; row < 7; row += 1) {
-      g.beginPath();
-      g.moveTo(58, 142 + row * 74);
-      g.lineTo(422, 112 + row * 74);
-      g.strokePath();
+    // ---- テーブル表面の微細グリッド（Space Cadet特有の質感） ----
+    g.lineStyle(1, 0x181e60, 0.3);
+    for (let gy = 100; gy < 900; gy += 44) {
+      g.beginPath(); g.moveTo(42, gy); g.lineTo(430, gy); g.strokePath();
+    }
+    g.lineStyle(1, 0x181e60, 0.18);
+    for (let gx = 60; gx < 430; gx += 44) {
+      g.beginPath(); g.moveTo(gx, 90); g.lineTo(gx, 900); g.strokePath();
     }
 
-    // ---- プレイエリア枠（シアン） ----
-    g.lineStyle(2, 0x00e5ff, 0.28);
-    g.strokeRoundedRect(52, 102, 370, 560, 18);
-
-    // ---- 上部ランプライン（ネオンピンク） ----
-    g.lineStyle(5, 0xff00cc, 0.55);
-    g.beginPath();
-    g.moveTo(118, 162);
-    g.lineTo(216, 118);
-    g.lineTo(292, 134);
-    g.lineTo(392, 194);
-    g.strokePath();
-
-    // ---- 中段ランプライン（シアン） ----
-    g.lineStyle(4, 0x00e5ff, 0.45);
-    g.beginPath();
-    g.moveTo(92, 522);
-    g.lineTo(164, 468);
-    g.lineTo(254, 492);
-    g.lineTo(338, 432);
-    g.lineTo(396, 462);
-    g.strokePath();
-
-    // ---- 下部ガイドライン（ネオンイエロー） ----
-    g.lineStyle(4, 0xffea00, 0.62);
-    g.beginPath();
-    g.moveTo(110, 742);
-    g.lineTo(66, 882);
-    g.lineTo(204, 906);
-    g.moveTo(430, 742);
-    g.lineTo(474, 882);
-    g.lineTo(336, 906);
-    g.strokePath();
-
-    // ---- 右レーンとターゲットエリア枠 ----
-    g.lineStyle(3, 0x00e5ff, 0.48);
-    g.strokeRoundedRect(450, 116, 20, 662, 10);
-    g.lineStyle(3, 0xff40ff, 0.38);
-    g.strokeRoundedRect(88, 140, 52, 360, 14);
-
-    // ---- 上部スコアパネル（ほぼ黒） ----
-    g.fillStyle(0x0a0018, 0.96);
+    // ---- 上部スコアパネル ----
+    g.fillStyle(0x000000, 1.0);
     g.fillRoundedRect(34, 24, 472, 60, 12);
-    g.lineStyle(2, 0xd040ff, 0.9);
+    g.lineStyle(3, 0xb88800, 0.9);
     g.strokeRoundedRect(34, 24, 472, 60, 12);
 
-    // ---- バンパーグロー（ネオンマゼンタ・シアン・黄） ----
-    g.fillStyle(0xff00cc, 0.22);
-    g.fillCircle(208, 244, 46);
-    g.fillStyle(0x00e5ff, 0.22);
-    g.fillCircle(318, 244, 46);
-    g.fillStyle(0xffea00, 0.22);
-    g.fillCircle(262, 332, 50);
+    // ---- サイドレール（紫/青の縦ライン） ----
+    // 左レール
+    g.lineStyle(6, 0x2a1a6a, 1.0);
+    g.beginPath(); g.moveTo(42, 88); g.lineTo(42, 908); g.strokePath();
+    g.lineStyle(2, 0x6644cc, 0.55);
+    g.beginPath(); g.moveTo(42, 88); g.lineTo(42, 908); g.strokePath();
+    // 右レール（メインエリア右端）
+    g.lineStyle(6, 0x2a1a6a, 1.0);
+    g.beginPath(); g.moveTo(430, 88); g.lineTo(430, 908); g.strokePath();
+    g.lineStyle(2, 0x6644cc, 0.45);
+    g.beginPath(); g.moveTo(430, 88); g.lineTo(430, 908); g.strokePath();
 
-    // ---- 小デコレーション丸（ランプ端） ----
-    g.fillStyle(0xff00cc, 0.9);
-    g.fillCircle(102, 182, 10);
-    g.fillCircle(116, 212, 8);
-    g.fillStyle(0x00e5ff, 0.9);
-    g.fillCircle(388, 184, 10);
-    g.fillCircle(404, 214, 8);
+    // ---- 左レールのインジケーターライト（小丸）----
+    const leftLights = [
+      { y: 200, color: 0xff4400 }, { y: 254, color: 0xff6600 },
+      { y: 308, color: 0xff4400 }, { y: 362, color: 0xff8800 },
+      { y: 416, color: 0xff6600 }, { y: 470, color: 0xff4400 },
+    ];
+    for (const ll of leftLights) {
+      g.fillStyle(ll.color, 0.55);
+      g.fillCircle(50, ll.y, 5);
+      g.fillStyle(0xffffff, 0.3);
+      g.fillCircle(49, ll.y - 1, 2);
+    }
 
-    // ---- スターゲートのアーチ装飾 ----
-    g.fillStyle(0xffea00, 0.85);
-    g.fillCircle(144, 560, 12);
-    g.fillCircle(202, 600, 10);
-    g.fillCircle(306, 606, 10);
-    g.fillCircle(362, 564, 12);
+    // 右レール（メインエリア右端）インジケーター
+    const rightLights = [
+      { y: 190, color: 0xffaa00 }, { y: 250, color: 0xff8800 },
+      { y: 310, color: 0xffaa00 }, { y: 370, color: 0xff6600 },
+      { y: 430, color: 0xffaa00 },
+    ];
+    for (const rl of rightLights) {
+      g.fillStyle(rl.color, 0.5);
+      g.fillCircle(422, rl.y, 5);
+    }
 
-    // ---- 上三角デコ（ネオングリーン） ----
-    g.fillStyle(0x76ff03, 0.78);
+    // ---- 上部ランプライン（明るい青/シアン） ----
+    g.lineStyle(6, 0x2266dd, 0.75);
+    g.beginPath();
+    g.moveTo(118, 162); g.lineTo(210, 114); g.lineTo(294, 130); g.lineTo(390, 194);
+    g.strokePath();
+    g.lineStyle(2, 0x88bbff, 0.5);
+    g.beginPath();
+    g.moveTo(118, 162); g.lineTo(210, 114); g.lineTo(294, 130); g.lineTo(390, 194);
+    g.strokePath();
+
+    // 中段ランプライン（青）
+    g.lineStyle(4, 0x1a55bb, 0.6);
+    g.beginPath();
+    g.moveTo(92, 522); g.lineTo(164, 468); g.lineTo(254, 492); g.lineTo(338, 432); g.lineTo(396, 462);
+    g.strokePath();
+
+    // ---- ガイドライン（オレンジ） ----
+    g.lineStyle(5, 0xcc6600, 0.75);
+    g.beginPath();
+    g.moveTo(110, 742); g.lineTo(66, 882); g.lineTo(204, 910);
+    g.moveTo(430, 742); g.lineTo(474, 882); g.lineTo(336, 910);
+    g.strokePath();
+    g.lineStyle(2, 0xff9933, 0.4);
+    g.beginPath();
+    g.moveTo(110, 742); g.lineTo(66, 882); g.lineTo(204, 910);
+    g.moveTo(430, 742); g.lineTo(474, 882); g.lineTo(336, 910);
+    g.strokePath();
+
+    // ---- ターゲットエリア枠（左レール） ----
+    g.fillStyle(0x0a0e38, 0.9);
+    g.fillRoundedRect(88, 140, 52, 360, 14);
+    g.lineStyle(2, 0x4455aa, 0.8);
+    g.strokeRoundedRect(88, 140, 52, 360, 14);
+
+    // ---- バンパーグロー（ブルー/パープル） ----
+    g.fillStyle(0x1a2288, 0.30);
+    g.fillCircle(208, 244, 52);
+    g.fillStyle(0x1a2288, 0.30);
+    g.fillCircle(318, 244, 52);
+    g.fillStyle(0x1a1a88, 0.30);
+    g.fillCircle(262, 332, 56);
+
+    // ---- バンパーリングアーク（鮮やかブルー） ----
+    g.lineStyle(4, 0x4488ff, 0.75);
+    g.beginPath();
+    g.arc(208, 244, 64, Phaser.Math.DegToRad(218), Phaser.Math.DegToRad(24), false);
+    g.strokePath();
+    g.lineStyle(4, 0x4488ff, 0.75);
+    g.beginPath();
+    g.arc(318, 244, 64, Phaser.Math.DegToRad(156), Phaser.Math.DegToRad(322), false);
+    g.strokePath();
+    g.lineStyle(4, 0x3377ee, 0.75);
+    g.beginPath();
+    g.arc(262, 332, 72, Phaser.Math.DegToRad(210), Phaser.Math.DegToRad(330), false);
+    g.strokePath();
+
+    // ---- 中段バンパーグロー（下の3つ） ----
+    g.fillStyle(0x441188, 0.25);
+    g.fillCircle(184, 548, 40);
+    g.fillCircle(340, 548, 40);
+    g.fillCircle(262, 626, 44);
+    g.lineStyle(3, 0x8844cc, 0.55);
+    g.beginPath();
+    g.arc(184, 548, 40, 0, Math.PI * 2);
+    g.strokePath();
+    g.beginPath();
+    g.arc(340, 548, 40, 0, Math.PI * 2);
+    g.strokePath();
+    g.lineStyle(3, 0x6633bb, 0.55);
+    g.beginPath();
+    g.arc(262, 626, 44, 0, Math.PI * 2);
+    g.strokePath();
+
+    // ---- 色付きライトデコ ----
+    // 赤/オレンジ（上部）
+    g.fillStyle(0xff2200, 0.9);
+    g.fillCircle(102, 182, 9);
+    g.fillStyle(0xffffff, 0.6);
+    g.fillCircle(100, 179, 3.5);
+    g.fillStyle(0xff5500, 0.88);
+    g.fillCircle(116, 212, 7);
+    g.fillStyle(0xff2200, 0.9);
+    g.fillCircle(388, 184, 9);
+    g.fillStyle(0xffffff, 0.6);
+    g.fillCircle(386, 181, 3.5);
+    g.fillStyle(0xff5500, 0.88);
+    g.fillCircle(404, 214, 7);
+
+    // アンバー（中段ゲート）
+    g.fillStyle(0xffaa00, 0.9);
+    g.fillCircle(144, 560, 11);
+    g.fillStyle(0xffffff, 0.5);
+    g.fillCircle(142, 557, 4);
+    g.fillStyle(0xffcc44, 0.85);
+    g.fillCircle(202, 600, 9);
+    g.fillCircle(306, 606, 9);
+    g.fillStyle(0xffaa00, 0.9);
+    g.fillCircle(362, 564, 11);
+    g.fillStyle(0xffffff, 0.5);
+    g.fillCircle(360, 561, 4);
+
+    // ---- 三角デコ（上部 - オレンジ/グリーン） ----
+    g.fillStyle(0xee6600, 0.88);
     g.fillTriangle(244, 164, 280, 150, 264, 196);
     g.fillTriangle(328, 150, 364, 164, 308, 198);
+    g.lineStyle(1.5, 0x662200, 0.8);
+    g.strokeTriangle(244, 164, 280, 150, 264, 196);
+    g.strokeTriangle(328, 150, 364, 164, 308, 198);
 
-    // ---- バンパーリングアーク ----
-    g.lineStyle(3, 0xff40ff, 0.65);
-    g.beginPath();
-    g.arc(208, 244, 60, Phaser.Math.DegToRad(218), Phaser.Math.DegToRad(24), false);
-    g.strokePath();
-    g.lineStyle(3, 0x00e5ff, 0.65);
-    g.beginPath();
-    g.arc(318, 244, 60, Phaser.Math.DegToRad(156), Phaser.Math.DegToRad(322), false);
-    g.strokePath();
-    g.lineStyle(3, 0xffea00, 0.65);
-    g.beginPath();
-    g.arc(262, 332, 68, Phaser.Math.DegToRad(210), Phaser.Math.DegToRad(330), false);
-    g.strokePath();
+    // ---- Space Cadet特有：オレンジ下向き矢印（テーブル下部に散在） ----
+    // 下向き三角矢印を複数配置
+    const downArrows = [
+      { x: 152, y: 468 }, { x: 218, y: 468 },
+      { x: 302, y: 468 }, { x: 368, y: 468 },
+      { x: 120, y: 560 }, { x: 394, y: 556 },
+      { x: 160, y: 648 }, { x: 362, y: 648 },
+      { x: 118, y: 716 }, { x: 398, y: 714 },
+    ];
+    for (const arr of downArrows) {
+      g.fillStyle(0xee6600, 0.85);
+      g.fillTriangle(arr.x, arr.y + 14, arr.x + 14, arr.y - 6, arr.x - 14, arr.y - 6);
+      g.lineStyle(1, 0x662200, 0.7);
+      g.strokeTriangle(arr.x, arr.y + 14, arr.x + 14, arr.y - 6, arr.x - 14, arr.y - 6);
+    }
 
-    // ---- ターゲットパネル（ダーク） ----
-    g.fillStyle(0x1a003a, 0.95);
-    g.fillRoundedRect(62, 116, 16, 38, 6);
-    g.fillRoundedRect(388, 116, 16, 38, 6);
-    g.fillRoundedRect(216, 378, 92, 24, 10);
-    g.lineStyle(2, 0xff40ff, 0.65);
-    g.strokeRoundedRect(62, 116, 16, 38, 6);
-    g.strokeRoundedRect(388, 116, 16, 38, 6);
-    g.lineStyle(2, 0xffea00, 0.65);
-    g.strokeRoundedRect(216, 378, 92, 24, 10);
-
-    // ---- ターゲット丸（ネオンオレンジ） ----
-    g.fillStyle(0xff8800, 0.95);
-    g.fillCircle(70, 135, 5);
-    g.fillCircle(396, 135, 5);
-    g.fillCircle(232, 390, 5);
-    g.fillCircle(292, 390, 5);
+    // ---- 水平インジケーターライト行（Space Cadet特有：小さな丸が並ぶ） ----
+    // 中段エリア
+    const dotRows = [
+      { y: 410, xs: [108, 136, 164, 192, 280, 308, 336, 364, 392] },
+      { y: 660, xs: [108, 136, 164, 192, 220, 280, 308, 336, 364, 392] },
+      { y: 754, xs: [122, 150, 178, 260, 288, 336, 364] },
+    ];
+    for (const row of dotRows) {
+      for (const x of row.xs) {
+        g.fillStyle(0x2a3a88, 0.9);
+        g.fillCircle(x, row.y, 4.5);
+        g.lineStyle(1, 0x4455aa, 0.6);
+        g.strokeCircle(x, row.y, 4.5);
+        g.fillStyle(0x6677cc, 0.35);
+        g.fillCircle(x - 1, row.y - 1, 2);
+      }
+    }
 
     // ---- コーナーボルト ----
-    g.fillStyle(0xd040ff, 0.9);
-    g.fillCircle(44, 38, 5);
-    g.fillCircle(496, 38, 5);
-    g.fillCircle(44, 920, 5);
-    g.fillCircle(496, 920, 5);
+    g.fillStyle(0x5a3a00, 0.95);
+    g.fillCircle(44, 38, 8);
+    g.fillCircle(496, 38, 8);
+    g.fillCircle(44, 920, 8);
+    g.fillCircle(496, 920, 8);
+    g.fillStyle(0xffcc44, 0.9);
+    g.fillCircle(44, 38, 4);
+    g.fillCircle(496, 38, 4);
+    g.fillCircle(44, 920, 4);
+    g.fillCircle(496, 920, 4);
+    g.fillStyle(0xffffff, 0.5);
+    g.fillCircle(43, 37, 1.5);
+    g.fillCircle(495, 37, 1.5);
 
-    // ---- 右レーンのジグザグデコ ----
-    g.lineStyle(2, 0xff40ff, 0.38);
+    // ---- 右レーンのデコ ----
+    g.lineStyle(1.5, 0x1a2a5c, 0.45);
     g.beginPath();
-    g.moveTo(454, 136);
-    g.lineTo(466, 154);
-    g.lineTo(454, 172);
-    g.lineTo(466, 190);
-    g.lineTo(454, 208);
-    g.lineTo(466, 226);
-    g.lineTo(454, 244);
-    g.lineTo(466, 262);
-    g.lineTo(454, 280);
-    g.lineTo(466, 298);
-    g.lineTo(454, 316);
-    g.lineTo(466, 334);
-    g.lineTo(454, 352);
-    g.lineTo(466, 370);
-    g.lineTo(454, 388);
-    g.lineTo(466, 406);
-    g.lineTo(454, 424);
-    g.lineTo(466, 442);
-    g.lineTo(454, 460);
-    g.lineTo(466, 478);
-    g.lineTo(454, 496);
-    g.lineTo(466, 514);
-    g.lineTo(454, 532);
-    g.lineTo(466, 550);
-    g.lineTo(454, 568);
-    g.lineTo(466, 586);
-    g.lineTo(454, 604);
-    g.lineTo(466, 622);
-    g.lineTo(454, 640);
-    g.lineTo(466, 658);
-    g.lineTo(454, 676);
-    g.lineTo(466, 694);
-    g.lineTo(454, 712);
-    g.lineTo(466, 730);
-    g.lineTo(454, 748);
+    for (let zy = 136; zy < 748; zy += 18) {
+      g.moveTo(438, zy); g.lineTo(464, zy + 9);
+    }
     g.strokePath();
+    // シューターレーンの小ライト
+    for (let ly = 160; ly < 760; ly += 52) {
+      g.fillStyle(0x2a3a88, 0.8);
+      g.fillCircle(460, ly, 3.5);
+    }
 
-    // ---- フリッパーエリア三角（ダーク紫） ----
-    g.fillStyle(0x1a0040, 1);
+    // ---- フリッパーエリア（オレンジ/赤 - Space Cadet特有） ----
+    g.fillStyle(0x882200, 0.92);
     g.fillTriangle(76, 820, 176, 820, 96, 900);
     g.fillTriangle(464, 820, 364, 820, 444, 900);
-    g.lineStyle(3, 0xd040ff, 0.55);
+    g.lineStyle(3, 0xdd5500, 0.85);
     g.strokeTriangle(76, 820, 176, 820, 96, 900);
     g.strokeTriangle(464, 820, 364, 820, 444, 900);
+    // フリッパー三角ハイライト
+    g.fillStyle(0xcc4400, 0.45);
+    g.fillTriangle(80, 824, 150, 824, 97, 878);
+    g.fillTriangle(460, 824, 390, 824, 443, 878);
   }
 
   buildStaticLabels() {
     const makeLabel = (x, y, text, options = {}) => this.add.text(x, y, text, {
       fontFamily: options.fontFamily ?? 'Impact',
       fontSize: options.fontSize ?? '18px',
-      color: options.color ?? '#ff40ff',
-      stroke: options.stroke ?? '#1a003a',
+      color: options.color ?? '#66ccff',
+      stroke: options.stroke ?? '#001a2a',
       strokeThickness: options.strokeThickness ?? 5,
       align: options.align ?? 'center',
       rotation: options.rotation,
@@ -459,22 +576,22 @@ export class GameScene extends Phaser.Scene {
 
     makeLabel(270, 120, 'ORBITAL CADET', {
       fontSize: '30px',
-      color: '#ffea00',
-      stroke: '#3a0060',
+      color: '#ff9900',
+      stroke: '#3a1800',
       strokeThickness: 7,
     });
 
     makeLabel(118, 196, 'BOOST', {
       fontSize: '18px',
-      color: '#ff00cc',
-      stroke: '#1a003a',
+      color: '#ff6600',
+      stroke: '#1a0e00',
       strokeThickness: 5,
       angle: -74,
     });
 
     makeLabel(118, 358, 'TARGETS', {
       fontSize: '18px',
-      color: '#00e5ff',
+      color: '#66ccff',
       stroke: '#001a2a',
       strokeThickness: 5,
       angle: -90,
@@ -482,7 +599,7 @@ export class GameScene extends Phaser.Scene {
 
     makeLabel(380, 226, 'HYPER RAMP', {
       fontSize: '17px',
-      color: '#00e5ff',
+      color: '#66ccff',
       stroke: '#001a2a',
       strokeThickness: 5,
       angle: -32,
@@ -490,23 +607,23 @@ export class GameScene extends Phaser.Scene {
 
     makeLabel(252, 706, 'BONUS LANE', {
       fontSize: '22px',
-      color: '#ffea00',
-      stroke: '#3a2000',
+      color: '#ff9900',
+      stroke: '#3a1800',
       strokeThickness: 5,
       angle: 1,
     });
 
     makeLabel(462, 824, 'LAUNCH', {
       fontSize: '18px',
-      color: '#d040ff',
-      stroke: '#1a003a',
+      color: '#aabbcc',
+      stroke: '#001a2a',
       strokeThickness: 5,
       angle: -90,
     });
 
     makeLabel(138, 862, 'DANGER', {
       fontSize: '17px',
-      color: '#ff4444',
+      color: '#ff4400',
       stroke: '#1a0000',
       strokeThickness: 5,
       angle: 33,
@@ -514,7 +631,7 @@ export class GameScene extends Phaser.Scene {
 
     makeLabel(398, 862, 'ESCAPE', {
       fontSize: '17px',
-      color: '#00e5ff',
+      color: '#66ccff',
       stroke: '#001a2a',
       strokeThickness: 5,
       angle: -33,
@@ -522,22 +639,22 @@ export class GameScene extends Phaser.Scene {
 
     makeLabel(260, 390, 'STAR GATE', {
       fontSize: '14px',
-      color: '#ff40ff',
-      stroke: '#1a003a',
+      color: '#66ccff',
+      stroke: '#001a2a',
       strokeThickness: 4,
     });
 
     makeLabel(94, 792, 'WARP', {
       fontSize: '18px',
-      color: '#d040ff',
-      stroke: '#1a003a',
+      color: '#aabbcc',
+      stroke: '#001a2a',
       strokeThickness: 5,
       angle: -66,
     });
 
     makeLabel(426, 792, 'ORBIT', {
       fontSize: '18px',
-      color: '#00e5ff',
+      color: '#66ccff',
       stroke: '#001a2a',
       strokeThickness: 5,
       angle: 66,
@@ -559,67 +676,98 @@ export class GameScene extends Phaser.Scene {
 
     for (const target of targetVisuals) {
       const lit = targets[target.key];
-      g.fillStyle(lit ? 0xff40ff : 0x2a004a, lit ? 1 : 0.75);
+      // ターゲット外枠（クローム/スチール）
+      g.fillStyle(lit ? 0xcc5500 : 0x1a2233, lit ? 1 : 0.85);
       g.fillRoundedRect(target.x - 12, target.y - 34, 24, 68, 8);
-      g.fillStyle(lit ? 0xffea00 : 0x0f0020, 0.9);
+      // ターゲット面
+      g.fillStyle(lit ? 0xff8800 : 0x0a1020, 0.9);
       g.fillRoundedRect(target.x - 7, target.y - 26, 14, 52, 6);
-      g.lineStyle(2, lit ? 0xffffff : 0x00e5ff, 0.82);
+      // ターゲット枠
+      g.lineStyle(2, lit ? 0xffffff : 0x334455, 0.82);
       g.strokeRoundedRect(target.x - 12, target.y - 34, 24, 68, 8);
     }
 
     for (const bumper of this.table.bumpers) {
+      const bx = bumper.position.x;
+      const by = bumper.position.y;
+      const isTop = by < 400;
+      // Space Cadet風バンパー：多重同心円
       // 外グロー
-      g.fillStyle(0xff00cc, 0.18);
-      g.fillCircle(bumper.position.x, bumper.position.y, 44);
-      // バンパー本体
-      g.fillStyle(0x2a0060, 0.9);
-      g.fillCircle(bumper.position.x, bumper.position.y, 29);
-      g.lineStyle(6, 0xff00cc, 1.0);
-      g.strokeCircle(bumper.position.x, bumper.position.y, 27);
-      g.lineStyle(4, 0xffea00, 0.9);
-      g.strokeCircle(bumper.position.x, bumper.position.y, 20);
-      g.fillStyle(0xffffff, 0.9);
-      g.fillCircle(bumper.position.x + 10, bumper.position.y - 12, 4);
+      g.fillStyle(isTop ? 0x1122aa : 0x440088, 0.20);
+      g.fillCircle(bx, by, 52);
+      // 外リング（シルバーグレー）
+      g.fillStyle(0x9aabbf, 0.95);
+      g.fillCircle(bx, by, 30);
+      g.lineStyle(2, 0xccddee, 0.85);
+      g.strokeCircle(bx, by, 30);
+      // 第2リング（ダーク）
+      g.fillStyle(0x0a0c28, 0.95);
+      g.fillCircle(bx, by, 24);
+      // 第3リング（ブルー/パープル）
+      g.lineStyle(3, isTop ? 0x4488ff : 0x8844cc, 0.9);
+      g.strokeCircle(bx, by, 20);
+      // 第4リング（細い明るいリング）
+      g.lineStyle(1.5, isTop ? 0xaaccff : 0xcc99ff, 0.6);
+      g.strokeCircle(bx, by, 14);
+      // センタードット（白/明るい）
+      g.fillStyle(0xeeeeff, 0.95);
+      g.fillCircle(bx, by, 6);
+      g.fillStyle(isTop ? 0x4488ff : 0x9944ff, 0.9);
+      g.fillCircle(bx, by, 4);
+      // ハイライト
+      g.fillStyle(0xffffff, 0.65);
+      g.fillCircle(bx - 9, by - 9, 4);
+      g.fillStyle(0xffffff, 0.3);
+      g.fillCircle(bx - 7, by - 7, 2);
     }
 
     for (const flipper of this.flipperSystem.getBodies()) {
       const body = flipper.body;
-      // フリッパー：アクティブ=シアン、待機=紫
-      g.fillStyle(flipper.active ? 0x00e5ff : 0x8800cc, 1);
-      g.lineStyle(4, flipper.active ? 0x80ffff : 0xd040ff, 0.9);
+      // フリッパー：シルバー/クローム
+      const fillColor = flipper.active ? 0xaabbcc : 0x778899;
+      g.fillStyle(fillColor, 1);
+      g.lineStyle(3, flipper.active ? 0xddeeff : 0x99aacc, 0.9);
       g.save();
       g.translateCanvas(body.position.x, body.position.y);
       g.rotateCanvas(body.angle);
       g.fillRoundedRect(-(this.flipperSystem.length / 2), -(this.flipperSystem.width / 2), this.flipperSystem.length, this.flipperSystem.width, 8);
       g.strokeRoundedRect(-(this.flipperSystem.length / 2), -(this.flipperSystem.width / 2), this.flipperSystem.length, this.flipperSystem.width, 8);
-      g.lineStyle(2, 0xffffff, 0.45);
+      g.lineStyle(2, 0xffffff, 0.35);
       g.beginPath();
       g.moveTo(-(this.flipperSystem.length / 2) + 10, -(this.flipperSystem.width / 2) + 4);
       g.lineTo((this.flipperSystem.length / 2) - 10, -(this.flipperSystem.width / 2) + 4);
       g.strokePath();
       g.restore();
-      g.fillStyle(0xd040ff, 1);
+      // ピボット
+      g.fillStyle(0x8899aa, 1);
       g.fillCircle(flipper.pivot.x, flipper.pivot.y, 8);
+      g.fillStyle(0xddeeff, 0.55);
+      g.fillCircle(flipper.pivot.x - 2, flipper.pivot.y - 2, 3);
     }
 
     if (ball) {
       this.ballGlow.setPosition(ball.position.x, ball.position.y);
-      // ボールグロー
-      g.fillStyle(0xff40ff, 0.25);
+      // ボールグロー（ブルー）
+      g.fillStyle(0x0044aa, 0.18);
       g.fillCircle(ball.position.x, ball.position.y, 22);
-      g.fillStyle(0xffffff, 1);
+      // ボール本体（シルバー）
+      g.fillStyle(0xc0c8d8, 1);
       g.fillCircle(ball.position.x, ball.position.y, 12);
-      g.lineStyle(3, 0x00e5ff, 0.7);
-      g.strokeCircle(ball.position.x, ball.position.y, 12);
-      g.lineStyle(2, 0xff40ff, 0.5);
-      g.strokeCircle(ball.position.x, ball.position.y, 16);
+      // シェーディング
+      g.fillStyle(0x8896a8, 0.45);
+      g.fillCircle(ball.position.x + 3, ball.position.y + 4, 8);
+      // ハイライト
+      g.fillStyle(0xffffff, 0.8);
+      g.fillCircle(ball.position.x - 4, ball.position.y - 4, 4.5);
+      g.fillStyle(0xffffff, 0.4);
+      g.fillCircle(ball.position.x - 2, ball.position.y - 2, 2);
     }
 
-    // プランジャーゲージ（マゼンタ）
-    g.fillStyle(0xff00cc, 0.3 + this.plungerSystem.charge * 0.55);
+    // プランジャーゲージ（オレンジ/アンバー）
+    g.fillStyle(0xff8800, 0.3 + this.plungerSystem.charge * 0.55);
     g.fillRoundedRect(460, 788 - (this.plungerSystem.charge * 120), 16, 120 * this.plungerSystem.charge, 6);
 
-    g.lineStyle(2, 0xd040ff, 0.55);
+    g.lineStyle(2, 0x8899aa, 0.55);
     for (let spring = 0; spring < 8; spring += 1) {
       const top = 808 + spring * 10;
       g.beginPath();

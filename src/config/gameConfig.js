@@ -11,7 +11,7 @@ export const gameConfig = {
   type: Phaser.AUTO,
   width: TABLE_WIDTH,
   height: TABLE_HEIGHT,
-  backgroundColor: '#08131d',
+  backgroundColor: '#04061a',
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

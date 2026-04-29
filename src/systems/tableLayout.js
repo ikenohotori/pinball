@@ -99,9 +99,8 @@ export function buildTable(scene) {
       plugin: { saverId: 'right' },
     }),
     addRectangle(scene, 270, 874, 186, 42, {
-      label: 'saver',
+      label: 'drain',
       isSensor: true,
-      plugin: { saverId: 'center' },
     }),
   ];
 

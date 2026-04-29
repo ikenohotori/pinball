@@ -1,30 +1,30 @@
 export class Hud {
   constructor(scene) {
     this.scene = scene;
-    this.topPanel = scene.add.rectangle(270, 54, 472, 60, 0x0a0018, 0.96)
-      .setStrokeStyle(2, 0xd040ff, 0.9)
+    this.topPanel = scene.add.rectangle(270, 54, 472, 60, 0x000000, 0.98)
+      .setStrokeStyle(2, 0xa06800, 0.9)
       .setDepth(38);
     this.scoreText = scene.add.text(28, 24, '', {
       fontFamily: 'Courier New',
       fontSize: '22px',
       fontStyle: 'bold',
-      color: '#ffea00',
-      stroke: '#3a2000',
+      color: '#ff9900',
+      stroke: '#3a1a00',
       strokeThickness: 3,
     }).setDepth(40);
 
     this.statusText = scene.add.text(28, 62, '', {
       fontFamily: 'Impact',
       fontSize: '15px',
-      color: '#ff40ff',
-      stroke: '#1a003a',
+      color: '#66ccff',
+      stroke: '#001a2a',
       strokeThickness: 3,
     }).setDepth(40);
 
     this.hintText = scene.add.text(270, 922, '', {
       fontFamily: 'Trebuchet MS',
       fontSize: '14px',
-      color: '#c0c0ff',
+      color: '#aabbcc',
       align: 'center',
     }).setOrigin(0.5, 0.5).setDepth(40);
   }
