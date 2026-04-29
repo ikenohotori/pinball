@@ -9,6 +9,5 @@ const game = new Phaser.Game({
   parent: 'game-shell',
 });
 
-if (import.meta.env.DEV) {
-  window.__pinballGame = game;
-}
+// テスト・デバッグ用にゲームインスタンスを公開
+window.__pinballGame = game;

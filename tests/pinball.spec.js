@@ -56,6 +56,7 @@ test('T01: ページ読み込み後にCanvas要素が表示される', async ({ 
 test('T02: 起動直後にタイトルシーンがアクティブになっている', async ({ page }) => {
   await page.goto('/');
   await waitForBoot(page);
+  await waitForScene(page, 'title', 10000);
   const active = await getActiveScene(page);
   expect(active).toBe('title');
 });
