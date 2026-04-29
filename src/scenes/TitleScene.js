@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { TABLE_WIDTH, PANEL_WIDTH } from '../config/gameConfig.js';
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -7,9 +8,10 @@ export class TitleScene extends Phaser.Scene {
 
   create() {
     const highScore = this.registry.get('highScore') ?? 0;
+    const totalWidth = TABLE_WIDTH + PANEL_WIDTH; // 750
 
-    // ---- 宇宙背景 ----
-    this.add.rectangle(270, 480, 540, 960, 0x000810);
+    // ---- 宇宙背景 (full width) ----
+    this.add.rectangle(totalWidth / 2, 480, totalWidth, 960, 0x000810);
 
     // 外枠（アンバー/ブロンズ金属フレーム）
     const frame = this.add.graphics();
@@ -135,5 +137,107 @@ export class TitleScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-SPACE', () => {
       this.scene.start('game');
     });
+
+    // ---- RIGHT PANEL ----
+    this._buildTitleRightPanel(totalWidth);
+  }
+
+  _buildTitleRightPanel(totalWidth) {
+    const highScore = this.registry.get('highScore') ?? 0;
+    const px = TABLE_WIDTH;
+    const pw = PANEL_WIDTH;
+    const cx = px + pw / 2;
+
+    const g = this.add.graphics();
+    // Panel background
+    g.fillStyle(0x000810, 1);
+    g.fillRect(px, 0, pw, 960);
+    // Separator
+    g.lineStyle(4, 0x5a3a00, 1.0);
+    g.beginPath(); g.moveTo(px, 0); g.lineTo(px, 960); g.strokePath();
+    g.lineStyle(1.5, 0xc88800, 0.7);
+    g.beginPath(); g.moveTo(px + 3, 0); g.lineTo(px + 3, 960); g.strokePath();
+
+    // Space background
+    g.fillStyle(0x020d20, 1);
+    g.fillRect(px + 2, 0, pw - 2, 960);
+
+    // Stars
+    for (let i = 0; i < 50; i++) {
+      const sx = px + 4 + ((i * 41 + 7) % (pw - 8));
+      const sy = 8 + ((i * 79 + 3) % 944);
+      const bright = 0.25 + (i % 6) * 0.08;
+      const r = i % 9 === 0 ? 1.5 : 0.8;
+      g.fillStyle(0xffffff, bright);
+      g.fillCircle(sx, sy, r);
+    }
+
+    // Planet
+    g.fillStyle(0x2a1200, 1);
+    g.fillCircle(cx + 44, 110, 36);
+    g.fillStyle(0x7a3500, 0.85);
+    g.fillCircle(cx + 36, 100, 28);
+    g.fillStyle(0xcc6000, 0.2);
+    g.fillCircle(cx + 44, 110, 44);
+    g.lineStyle(2, 0x886400, 0.5);
+    g.beginPath();
+    g.arc(cx + 44, 110, 50, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(340), false);
+    g.strokePath();
+
+    // Spaceship
+    g.fillStyle(0x7a8896, 0.5);
+    g.fillEllipse(cx - 10, 280, 110, 52);
+    g.fillStyle(0xbbc8d4, 0.6);
+    g.fillEllipse(cx - 10, 274, 84, 36);
+    g.lineStyle(2, 0x99aabb, 0.7);
+    g.strokeEllipse(cx - 10, 280, 110, 52);
+    g.fillStyle(0x2244aa, 0.8);
+    g.fillCircle(cx - 10, 271, 18);
+    g.fillStyle(0xff6600, 0.4);
+    g.fillCircle(cx + 44, 283, 10);
+    g.fillStyle(0xffaa00, 0.25);
+    g.fillCircle(cx + 44, 283, 15);
+
+    // "3D Pinball!" label
+    this.add.text(cx, 36, '3D Pinball!', {
+      fontFamily: 'Impact',
+      fontSize: '18px',
+      color: '#cc99ee',
+      stroke: '#110022',
+      strokeThickness: 3,
+    }).setOrigin(0.5, 0);
+
+    // "Space Cadet" label
+    this.add.text(cx, 62, 'Space\nCadet', {
+      fontFamily: 'Impact',
+      fontSize: '40px',
+      color: '#ffee88',
+      stroke: '#3a2800',
+      strokeThickness: 5,
+      align: 'center',
+      lineSpacing: 2,
+    }).setOrigin(0.5, 0);
+
+    // Separator
+    g.fillStyle(0x3a2500, 1);
+    g.fillRect(px + 2, 350, pw - 2, 4);
+
+    // High score in panel
+    this.add.text(cx, 368, 'HI SCORE', {
+      fontFamily: 'Impact',
+      fontSize: '16px',
+      color: '#aabbcc',
+      stroke: '#001a2a',
+      strokeThickness: 3,
+    }).setOrigin(0.5, 0);
+
+    this.add.text(cx, 392, String(highScore).padStart(6, '0'), {
+      fontFamily: 'Courier New',
+      fontSize: '24px',
+      fontStyle: 'bold',
+      color: '#ffaa00',
+      stroke: '#3a1a00',
+      strokeThickness: 3,
+    }).setOrigin(0.5, 0);
   }
 }

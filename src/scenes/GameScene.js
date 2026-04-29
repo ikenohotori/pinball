@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { TABLE_HEIGHT, TABLE_WIDTH } from '../config/gameConfig.js';
+import { TABLE_HEIGHT, TABLE_WIDTH, PANEL_WIDTH } from '../config/gameConfig.js';
 import { SynthSfx } from '../audio/sfx.js';
 import { BallSystem } from '../systems/ballSystem.js';
 import { FlipperSystem } from '../systems/flipperSystem.js';
@@ -38,6 +38,8 @@ export class GameScene extends Phaser.Scene {
 
     this.drawTableBase();
     this.buildStaticLabels();
+    this.drawRightPanel();
+    this.buildRightPanelLabels();
     this.ballSystem.spawn();
     this.ballGlow = this.add.circle(0, 0, 18, 0x4488cc, 0.18).setDepth(15);
 
@@ -77,6 +79,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   resolveZone(pointer) {
+    if (pointer.x >= TABLE_WIDTH) {
+      return null;
+    }
+
     const normalizedX = Phaser.Math.Clamp(pointer.x / TABLE_WIDTH, 0, 1);
 
     if (normalizedX < 0.33) {
@@ -91,6 +97,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   applyZone(zone, active) {
+    if (!zone) {
+      return;
+    }
+
     if (zone === 'left') {
       this.setFlipper('left', active);
       return;
@@ -289,19 +299,19 @@ export class GameScene extends Phaser.Scene {
 
     // ---- プレイエリア（青紫グラデーション・Space Cadet特有の色調） ----
     g.fillGradientStyle(0x0e1448, 0x0a1040, 0x080e38, 0x060c30, 1);
-    g.fillRoundedRect(36, 82, 400, 832, 18);
+    g.fillRoundedRect(36, 14, 400, 900, 18);
 
     // プレイエリア上部（少し明るい青） 
     g.fillStyle(0x121860, 0.22);
-    g.fillRoundedRect(40, 86, 392, 300, 14);
+    g.fillRoundedRect(40, 18, 392, 300, 14);
 
     // 右レーン（シューター）
     g.fillStyle(0x050820, 0.98);
-    g.fillRect(436, 82, 50, 832);
+    g.fillRect(436, 14, 50, 900);
 
     // 内枠
     g.lineStyle(2, 0x2a3880, 0.65);
-    g.strokeRoundedRect(38, 84, 396, 828, 16);
+    g.strokeRoundedRect(38, 16, 396, 896, 16);
 
     // ---- 星フィールド ----
     const starData = [
@@ -329,31 +339,25 @@ export class GameScene extends Phaser.Scene {
 
     // ---- テーブル表面の微細グリッド（Space Cadet特有の質感） ----
     g.lineStyle(1, 0x181e60, 0.3);
-    for (let gy = 100; gy < 900; gy += 44) {
+    for (let gy = 20; gy < 900; gy += 44) {
       g.beginPath(); g.moveTo(42, gy); g.lineTo(430, gy); g.strokePath();
     }
     g.lineStyle(1, 0x181e60, 0.18);
     for (let gx = 60; gx < 430; gx += 44) {
-      g.beginPath(); g.moveTo(gx, 90); g.lineTo(gx, 900); g.strokePath();
+      g.beginPath(); g.moveTo(gx, 20); g.lineTo(gx, 900); g.strokePath();
     }
-
-    // ---- 上部スコアパネル ----
-    g.fillStyle(0x000000, 1.0);
-    g.fillRoundedRect(34, 24, 472, 60, 12);
-    g.lineStyle(3, 0xb88800, 0.9);
-    g.strokeRoundedRect(34, 24, 472, 60, 12);
 
     // ---- サイドレール（紫/青の縦ライン） ----
     // 左レール
     g.lineStyle(6, 0x2a1a6a, 1.0);
-    g.beginPath(); g.moveTo(42, 88); g.lineTo(42, 908); g.strokePath();
+    g.beginPath(); g.moveTo(42, 18); g.lineTo(42, 908); g.strokePath();
     g.lineStyle(2, 0x6644cc, 0.55);
-    g.beginPath(); g.moveTo(42, 88); g.lineTo(42, 908); g.strokePath();
+    g.beginPath(); g.moveTo(42, 18); g.lineTo(42, 908); g.strokePath();
     // 右レール（メインエリア右端）
     g.lineStyle(6, 0x2a1a6a, 1.0);
-    g.beginPath(); g.moveTo(430, 88); g.lineTo(430, 908); g.strokePath();
+    g.beginPath(); g.moveTo(430, 18); g.lineTo(430, 908); g.strokePath();
     g.lineStyle(2, 0x6644cc, 0.45);
-    g.beginPath(); g.moveTo(430, 88); g.lineTo(430, 908); g.strokePath();
+    g.beginPath(); g.moveTo(430, 18); g.lineTo(430, 908); g.strokePath();
 
     // ---- 左レールのインジケーターライト（小丸）----
     const leftLights = [
@@ -852,5 +856,140 @@ export class GameScene extends Phaser.Scene {
 
     this.renderDynamic();
     this.renderHud();
+  }
+
+  drawRightPanel() {
+    const g = this.staticGraphics;
+    const px = TABLE_WIDTH;        // 540
+    const pw = PANEL_WIDTH;        // 210
+
+    // Panel background (fill includes the gap between table frame edge and panel)
+    g.fillStyle(0x000810, 1);
+    g.fillRect(518, 0, pw + 22, TABLE_HEIGHT);
+
+    // Separator line (table / panel border)
+    g.lineStyle(4, 0x5a3a00, 1.0);
+    g.beginPath(); g.moveTo(px, 0); g.lineTo(px, TABLE_HEIGHT); g.strokePath();
+    g.lineStyle(1.5, 0xc88800, 0.7);
+    g.beginPath(); g.moveTo(px + 3, 0); g.lineTo(px + 3, TABLE_HEIGHT); g.strokePath();
+
+    // ---- TITLE AREA (y=0 to y=260) ----
+    g.fillStyle(0x020d20, 1);
+    g.fillRect(px + 2, 0, pw - 2, 260);
+
+    // Stars
+    const starPositions = [
+      [549,18],[562,46],[579,30],[595,60],[613,14],[628,42],[643,22],[660,54],
+      [675,16],[690,46],[708,28],[723,58],[738,20],
+      [546,88],[563,114],[582,74],[601,104],[620,80],[638,100],[657,72],
+      [675,108],[694,76],[712,100],[730,74],
+      [550,154],[568,178],[589,132],[609,164],[628,148],[649,170],[669,128],
+      [691,160],[713,138],[731,167],
+      [544,212],[573,234],[601,200],[629,224],[656,198],[684,218],[712,202],[738,228],
+    ];
+    for (const [sx, sy] of starPositions) {
+      const brightness = (sx + sy) % 7;
+      g.fillStyle(0xffffff, 0.28 + brightness * 0.07);
+      g.fillCircle(sx, sy, brightness === 6 ? 1.5 : 0.8);
+    }
+
+    // Orange planet (top-right)
+    g.fillStyle(0x2a1200, 1);
+    g.fillCircle(720, 55, 30);
+    g.fillStyle(0x7a3500, 0.9);
+    g.fillCircle(714, 47, 24);
+    g.fillStyle(0xcc6000, 0.25);
+    g.fillCircle(720, 55, 36);
+    g.lineStyle(2.5, 0x886400, 0.55);
+    g.beginPath();
+    g.arc(720, 55, 40, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(340), false);
+    g.strokePath();
+
+    // Spaceship illustration
+    g.fillStyle(0x7a8896, 0.55);
+    g.fillEllipse(630, 192, 100, 48);
+    g.fillStyle(0xbbc8d4, 0.65);
+    g.fillEllipse(630, 187, 78, 34);
+    g.lineStyle(2, 0x99aabb, 0.75);
+    g.strokeEllipse(630, 192, 100, 48);
+    g.fillStyle(0x2244aa, 0.85);
+    g.fillCircle(630, 184, 16);
+    g.fillStyle(0x5577cc, 0.45);
+    g.fillCircle(625, 180, 7);
+    g.fillStyle(0xff6600, 0.45);
+    g.fillCircle(676, 194, 9);
+    g.fillStyle(0xffaa00, 0.3);
+    g.fillCircle(676, 194, 13);
+
+    // Title area bottom separator
+    g.fillStyle(0x3a2500, 1);
+    g.fillRect(px + 2, 258, pw - 2, 4);
+    g.lineStyle(2.5, 0xd49000, 0.8);
+    g.beginPath(); g.moveTo(px + 2, 260); g.lineTo(px + pw, 260); g.strokePath();
+
+    // ---- BALL ROW (y=260 to y=344) ----
+    g.fillGradientStyle(0xb0b8c0, 0xb0b8c0, 0x6a7280, 0x6a7280, 1);
+    g.fillRect(px + 2, 260, pw - 2, 84);
+    // Ball number box (black with red border)
+    g.fillStyle(0x000000, 1);
+    g.fillRect(px + pw - 62, 264, 58, 72);
+    g.lineStyle(3, 0xcc1100, 1);
+    g.strokeRect(px + pw - 62, 264, 58, 72);
+
+    // Ball row bottom separator
+    g.fillStyle(0x3a2500, 1);
+    g.fillRect(px + 2, 344, pw - 2, 4);
+    g.lineStyle(2.5, 0xd49000, 0.8);
+    g.beginPath(); g.moveTo(px + 2, 346); g.lineTo(px + pw, 346); g.strokePath();
+
+    // ---- SCORE ROW (y=348 to y=420) ----
+    g.fillStyle(0x000000, 1);
+    g.fillRect(px + 2, 348, pw - 2, 72);
+    // Player number box (amber)
+    g.fillStyle(0x7a5800, 1);
+    g.fillRect(px + 4, 350, 58, 68);
+    g.lineStyle(2, 0xbbaa00, 1);
+    g.strokeRect(px + 4, 350, 58, 68);
+    // Score value box
+    g.fillStyle(0x050505, 1);
+    g.fillRect(px + 66, 350, pw - 70, 68);
+    g.lineStyle(2, 0x554400, 0.9);
+    g.strokeRect(px + 66, 350, pw - 70, 68);
+
+    // Score row bottom separator
+    g.fillStyle(0x3a2500, 1);
+    g.fillRect(px + 2, 420, pw - 2, 4);
+    g.lineStyle(2.5, 0xd49000, 0.8);
+    g.beginPath(); g.moveTo(px + 2, 422); g.lineTo(px + pw, 422); g.strokePath();
+
+    // ---- MISSION TEXT AREA (y=424 to y=960) ----
+    g.fillStyle(0x000000, 1);
+    g.fillRect(px + 2, 424, pw - 2, TABLE_HEIGHT - 424);
+    g.lineStyle(1.5, 0x1a2a44, 0.5);
+    g.strokeRect(px + 4, 426, pw - 6, TABLE_HEIGHT - 430);
+  }
+
+  buildRightPanelLabels() {
+    const px = TABLE_WIDTH;        // 540
+    const pw = PANEL_WIDTH;        // 210
+    const cx = px + pw / 2;        // 645
+
+    this.add.text(cx, 34, '3D Pinball!', {
+      fontFamily: 'Impact',
+      fontSize: '17px',
+      color: '#cc99ee',
+      stroke: '#110022',
+      strokeThickness: 3,
+    }).setOrigin(0.5, 0).setDepth(12);
+
+    this.add.text(cx, 60, 'Space\nCadet', {
+      fontFamily: 'Impact',
+      fontSize: '38px',
+      color: '#ffee88',
+      stroke: '#3a2800',
+      strokeThickness: 5,
+      align: 'center',
+      lineSpacing: 2,
+    }).setOrigin(0.5, 0).setDepth(12);
   }
 }
