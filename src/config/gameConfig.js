@@ -6,16 +6,18 @@ import { GameOverScene } from '../scenes/GameOverScene.js';
 
 export const TABLE_WIDTH = 540;
 export const TABLE_HEIGHT = 960;
+export const PANEL_WIDTH = 210;
+export const TOTAL_WIDTH = TABLE_WIDTH + PANEL_WIDTH;
 
 export const gameConfig = {
   type: Phaser.AUTO,
-  width: TABLE_WIDTH,
+  width: TOTAL_WIDTH,
   height: TABLE_HEIGHT,
   backgroundColor: '#04061a',
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: TABLE_WIDTH,
+    width: TOTAL_WIDTH,
     height: TABLE_HEIGHT,
   },
   render: {

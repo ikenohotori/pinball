@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { TABLE_WIDTH, PANEL_WIDTH } from '../config/gameConfig.js';
 
 export class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -6,8 +7,10 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   create(data) {
+    const totalWidth = TABLE_WIDTH + PANEL_WIDTH;
+
     // ---- 宇宙背景 ----
-    this.add.rectangle(270, 480, 540, 960, 0x000810);
+    this.add.rectangle(totalWidth / 2, 480, totalWidth, 960, 0x000810);
 
     // 外枠（アンバー/ブロンズ金属フレーム）
     const frame = this.add.graphics();
@@ -99,5 +102,66 @@ export class GameOverScene extends Phaser.Scene {
 
     retry.on('pointerdown', () => this.scene.start('game'));
     title.on('pointerdown', () => this.scene.start('title'));
+
+    // ---- RIGHT PANEL ----
+    const px = TABLE_WIDTH;
+    const pw = PANEL_WIDTH;
+    const cx = px + pw / 2;
+
+    const g = this.add.graphics();
+    g.fillStyle(0x000810, 1);
+    g.fillRect(px, 0, pw, 960);
+    g.lineStyle(4, 0x5a3a00, 1.0);
+    g.beginPath(); g.moveTo(px, 0); g.lineTo(px, 960); g.strokePath();
+    g.lineStyle(1.5, 0xc88800, 0.7);
+    g.beginPath(); g.moveTo(px + 3, 0); g.lineTo(px + 3, 960); g.strokePath();
+
+    g.fillStyle(0x020d20, 1);
+    g.fillRect(px + 2, 0, pw - 2, 960);
+
+    for (let i = 0; i < 40; i++) {
+      const sx = px + 4 + ((i * 43 + 11) % (pw - 8));
+      const sy = 8 + ((i * 83 + 5) % 944);
+      g.fillStyle(0xffffff, 0.25 + (i % 5) * 0.08);
+      g.fillCircle(sx, sy, i % 7 === 0 ? 1.5 : 0.8);
+    }
+
+    this.add.text(cx, 80, '3D Pinball!', {
+      fontFamily: 'Impact',
+      fontSize: '18px',
+      color: '#cc99ee',
+      stroke: '#110022',
+      strokeThickness: 3,
+    }).setOrigin(0.5, 0);
+
+    this.add.text(cx, 108, 'Space\nCadet', {
+      fontFamily: 'Impact',
+      fontSize: '40px',
+      color: '#ffee88',
+      stroke: '#3a2800',
+      strokeThickness: 5,
+      align: 'center',
+      lineSpacing: 2,
+    }).setOrigin(0.5, 0);
+
+    this.add.text(cx, 280, String(data.score ?? 0).padStart(6, '0'), {
+      fontFamily: 'Courier New',
+      fontSize: '22px',
+      fontStyle: 'bold',
+      color: '#ffaa00',
+    }).setOrigin(0.5, 0);
+
+    this.add.text(cx, 318, 'HI SCORE', {
+      fontFamily: 'Impact',
+      fontSize: '14px',
+      color: '#aabbcc',
+    }).setOrigin(0.5, 0);
+
+    this.add.text(cx, 340, String(data.highScore ?? 0).padStart(6, '0'), {
+      fontFamily: 'Courier New',
+      fontSize: '20px',
+      fontStyle: 'bold',
+      color: '#66ccff',
+    }).setOrigin(0.5, 0);
   }
 }
